@@ -176,17 +176,9 @@ void Graph::Johnson() {
   BellmanFord(dist);
   //assuming there are no negative cycles in the graph like said in the instructions
   //reweight the edges
-  for(int i=0; i < _V; i++) {
-    _vertices[i].printConnections();
-  }
 
   for(int i = 0; i<_V; i++) {
-    printf("%d   :   %d|\n", i+1, dist[i]);
     _vertices[i].reweightConnections(dist, _V);
-  }
-
-  for(int i=0; i < _V; i++) {
-    _vertices[i].printConnections();
   }
   //bellman ford works
 
@@ -194,12 +186,10 @@ void Graph::Johnson() {
   for(int i = 0; i<_F; ++i) {
     vector<int> paths;
     int v = getFilial(i);
-    printf("%d\n", v+1);
     paths = Dijkstra(v); 
     for(int j=0; j<_V; j++) {
       if(paths[j] != numeric_limits<int>::max() && j != v)
         paths[j] += dist[j] - dist[v];
-      printf("%d    :     %d\n", j+1, paths[j]);
       if(i == 0) minPaths.push_back(paths[j]);
       else {
         if(minPaths[j] != numeric_limits<int>::max() && paths[j] != numeric_limits<int>::max())
