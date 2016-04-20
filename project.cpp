@@ -16,28 +16,33 @@
 
 using namespace std;
 
+
+struct edge {
+  int adjacent;
+  int weight;
+};
+
+
 class Vertex {
   int _id;
-  map<int, int> _weights;
-  int _minPath;
+  vector<edge> _adj;
+  int _filial;
 
 
 public:
 
-  Vertex(int v);
+  Vertex(int v, int filial);
   int getVertex();
+  void setFilial(int n);
+  int getFilial();
   void addConnection(int v, int w);
   int getWeight(int v);
-  void setMinPath(int a);
-  int getMinPath();
   bool verifyConnection(int v);
   void updateWeight(int v, int w);
+  void printConnections();
   list<int> getAdjacents();
   //void runDijkstra(vector<int> *dist, set<Vertex> *Q, int *prev[]);
   void reweightConnections(int * dist, int V);
-  bool operator< (const Vertex &right) const {
-    return _minPath  < right._minPath;
-  }
 };
 
 
@@ -45,92 +50,87 @@ public:
 typedef  pair<int, int> Pair;
 
 
-Vertex::Vertex(int v) {
+Vertex::Vertex(int v, int filial) {
   _id = v;
-  _minPath = numeric_limits<int>::max();
+  _filial = filial;
 }
 
 int Vertex::getVertex() {
   return _id;
 }
 
+void Vertex::setFilial(int n) {
+  _filial = n;
+}
+
+int Vertex::getFilial() {
+  return _filial;
+}
+
 void Vertex::addConnection(int v, int w) {
-  _weights[v] = w;
+  edge e;
+  e.adjacent = v;
+  e.weight = w;
+  _adj.push_back(e);
 }
 
 bool Vertex::verifyConnection(int v) {
-  if(_weights.count(v) > 0) return true;
+  vector<edge>::iterator it;
+  for(it = _adj.begin(); it != _adj.end(); ++it)
+    if(it->adjacent == v)
+      return true;
   return false;
 }
 
-void Vertex::setMinPath(int a) { _minPath = a; }
-
-int Vertex::getMinPath() {
-  return _minPath;
+void Vertex::printConnections() {
+  vector<edge>::iterator it;
+  for(it = _adj.begin(); it != _adj.end(); ++it) {
+    printf("%d - %d : %d\n", _id+1, it->adjacent+1, it->weight);
+  }
 }
 
 int Vertex::getWeight(int v) {
-  return _weights.find(v)->second;
+  vector<edge>::iterator it;
+  for(it = _adj.begin(); it != _adj.end(); ++it)
+    if(it->adjacent == v)
+      return it->weight;
+  return 0;
 }
 
 
 void Vertex::updateWeight(int v, int w) {
-  map<int, int>::iterator it = _weights.find(v); 
-  if(verifyConnection(v)) 
-    if (it != _weights.end())
-      it->second = w;
+  vector<edge>::iterator it;
+  for(it = _adj.begin(); it != _adj.end(); ++it)
+    if(it->adjacent == v) {
+      it->weight = w; 
+      break;
+    }
 }
 
 list<int> Vertex::getAdjacents() {
   list<int> adjacents;
-  map<int, int>::iterator it;
-  for(it = _weights.begin(); it != _weights.end(); ++it) 
-    adjacents.push_back(it->first);
+  vector<edge>::iterator it;
+  for(it = _adj.begin(); it != _adj.end(); ++it) {
+    int i = it->adjacent;
+    adjacents.push_back(i);
+  }
   return adjacents;
 }
 
 void Vertex::reweightConnections(int * dist, int V) {
   int new_w;
-  for(int i=0; i < V; i++) //better this loop
-    if(verifyConnection(i)) {
-      new_w = _weights[i] + dist[_id] - dist[i];
-      updateWeight(i, new_w);
+  vector<edge>::iterator it;
+  for(it = _adj.begin(); it != _adj.end(); ++it) //better this loop
+    if(verifyConnection(it->adjacent)) {
+      new_w = it->weight + dist[_id] - dist[it->adjacent];
+      updateWeight(it->adjacent, new_w);
     }
 }
-/*
-void Vertex::runDijkstra(vector<int> *dist, set<Vertex> *Q, int *prev[]) {
-  int alt, v, w;
-
-  map<int,int>::iterator it;
-  set<Vertex>::iterator it2;
-
-
-  for(it = _weights.begin(); it != _weights.end(); ++it) {
-    v = it->first;
-    printf("%d v\n", v);
-    w = it->second;
-    printf("%d w\n", w);
-    alt = dist[0][_id] + w;
-    printf("%d  source \n", alt);
-    if(alt < dist[0][v]) {
-      dist[0][v] = alt;
-      prev[0][v] = _id;
-      set<Vertex>::iterator set_it = Q[0].find(v);
-      if(set_it != Q[0].end()) {
-        Vertex v1 = *(set_it); //error here core dumped
-        Q[0].erase(set_it);
-        v1.setMinPath(alt);
-        Q[0].insert(v1);
-      }
-    }
-  }
-}*/
 
 class Graph {
   int _V;
   int _F;
   int _C;
-  vector<Vertex> _filials;
   vector<Vertex> _vertices;
 
 
@@ -138,27 +138,25 @@ public:
   Graph(int V, int F, int C);
   void Johnson();
   vector<int> Dijkstra(int source);
-  void BellmanFord(int *dist, int *pred);
+  void BellmanFord(int *dist);
+  int getFilial(int a);
 };
 
 Graph::Graph(int V, int F, int C) {
-  int a,b,w, f;
+  int a,b,w;
   this->_V = V;
   this->_F = F;
   this->_C = C;
 
-  //add every vertex to _vertices vector
-  for(int j=0; j < _V; j++) {
-    Vertex v(j);
+  for(int k=0; k<_V; k++) {
+    Vertex v(k, NIL);
     _vertices.push_back(v);
   }
 
-
-  //add filials ti _filials vector
-  for(int k=0; k<_F; k++) {
-    scanf("%d", &f);
-    Vertex u(f-1);
-    _filials.push_back(u);
+  for(int i = 0; i<_F; i++) {
+    int filial;
+    scanf("%d ", &filial);
+    _vertices[filial-1].setFilial(i); 
   }
 
   //register each connection given
@@ -172,30 +170,36 @@ Graph::Graph(int V, int F, int C) {
 
 void Graph::Johnson() {
   int * dist = new int[_V];
-  int * pred = new int[_V];
 
   vector<int> minPaths;
 
-  BellmanFord(dist, pred);
+  BellmanFord(dist);
   //assuming there are no negative cycles in the graph like said in the instructions
-
-
   //reweight the edges
+  for(int i=0; i < _V; i++) {
+    _vertices[i].printConnections();
+  }
+
   for(int i = 0; i<_V; i++) {
-    printf("%d : %d |", i+1, dist[i]);
+    printf("%d   :   %d|\n", i+1, dist[i]);
     _vertices[i].reweightConnections(dist, _V);
   }
 
+  for(int i=0; i < _V; i++) {
+    _vertices[i].printConnections();
+  }
+  //bellman ford works
 
-  cout << "\n";
+
   for(int i = 0; i<_F; ++i) {
     vector<int> paths;
-    int v = _filials[i].getVertex();
+    int v = getFilial(i);
+    printf("%d\n", v+1);
     paths = Dijkstra(v); 
     for(int j=0; j<_V; j++) {
       if(paths[j] != numeric_limits<int>::max() && j != v)
-        paths[j] += dist[j] - dist[v];  
-      printf("%d  :   %d\n", j +1, paths[j]);
+        paths[j] += dist[j] - dist[v];
+      printf("%d    :     %d\n", j+1, paths[j]);
       if(i == 0) minPaths.push_back(paths[j]);
       else {
         if(minPaths[j] != numeric_limits<int>::max() && paths[j] != numeric_limits<int>::max())
@@ -206,11 +210,6 @@ void Graph::Johnson() {
       }
     }
   }
-  cout << "\n";
-  for(int i =0; i<_V; i++) 
-    printf("%d  :   %d\n", i+1, minPaths[i]);
-  cout << "\n";
-
 
   int minCost = numeric_limits<int>::max();
   int local = NIL;
@@ -221,24 +220,11 @@ void Graph::Johnson() {
     }
   
   //TODO: outputs here!!!
-
-  for(int i = 0; i<_F; ++i) {
-    vector<int> shortest;
-    int v1 = _filials[i].getVertex();
-    shortest = Dijkstra(v1);
-    for(int j=0; j<_V; j++) {
-      if(shortest[j] != numeric_limits<int>::max() && j != v1)
-        shortest[j] += dist[j] - dist[v1];
-      printf("%d  :   %d\n", j +1, shortest[j]);
-    }
-  }
-
-
   if(local != NIL) {
     printf("%d %d\n", local + 1, minCost);
     for(int i =0; i <_F; i++) {
       vector<int> finalD;
-      int final = _filials[i].getVertex();
+      int final = getFilial(i);
       finalD = Dijkstra(final);
       finalD[local] += dist[local] - dist[final];
       printf("%d ", finalD[local]);
@@ -246,7 +232,7 @@ void Graph::Johnson() {
     cout << "\n";
   }
   else {
-    printf("N \n");
+    printf("N\n");
   }
 }
 
@@ -276,8 +262,7 @@ vector<int> Graph::Dijkstra(int source) {
     list<int> adjV = _vertices[v_id].getAdjacents();
     list<int>::iterator list_it;
     for(list_it = adjV.begin(); list_it != adjV.end(); ++list_it) {
-      Vertex u = *list_it;
-      int u_id = u.getVertex();
+      int u_id = *list_it;
       int alt = paths[v_id] + _vertices[v_id].getWeight(u_id);
       if(alt < paths[u_id] && paths[v_id] != numeric_limits<int>::max()) {
         int old_path = paths[u_id];
@@ -295,7 +280,6 @@ vector<int> Graph::Dijkstra(int source) {
     }
   }
 
-
   return paths;
 }
 
@@ -304,11 +288,10 @@ vector<int> Graph::Dijkstra(int source) {
 
 
 
-void Graph::BellmanFord(int *dist, int *pred) { // dist and pred arrays have _V+1 elements to count the source
+void Graph::BellmanFord(int *dist) { // dist and pred arrays have _V+1 elements to count the source
 
   for(int i=0; i<_V; i++) {
     dist[i] = 0;
-    pred[i] = NIL;
   }
 
 
@@ -317,14 +300,20 @@ void Graph::BellmanFord(int *dist, int *pred) { // dist and pred arrays have _V+
       if(_vertices[j].verifyConnection(k)) {
         if(dist[j] + _vertices[j].getWeight(k) < dist[k]) {
           dist[k] = dist[j] + _vertices[j].getWeight(k);
-          pred[k] = j;
         }
       }
     }
 }
 
-
-
+int Graph::getFilial(int a) {
+  int i;
+  for(i = 0; i <_V; i++) {
+    int f = _vertices[i].getFilial();
+    if(a == f) 
+      break;
+  }
+  return i;
+}
 
 int main() {
   int N, F, C;
@@ -333,50 +322,4 @@ int main() {
   graph.Johnson();
   return 0;
 }
-
-
-
-
-/*
- function Dijkstra(Graph, source):
-2      dist[source] ← 0                                    // Initialization
-3
-4      create vertex set Q
-5
-6      for each vertex v in Graph:           
-7          if v ≠ source
-8              dist[v] ← INFINITY                          // Unknown distance from source to v
-9              prev[v] ← UNDEFINED                         // Predecessor of v
-10
-11         Q.add_with_priority(v, dist[v])
-12
-13
-14     while Q is not empty:                              // The main loop
-15         u ← Q.extract_min()                            // Remove and return best vertex
-16         for each neighbor v of u:                       // only v that is still in Q
-17             alt = dist[u] + length(u, v) 
-18             if alt < dist[v]
-19                 dist[v] ← alt
-20                 prev[v] ← u
-21                 Q.decrease_priority(v, alt)
-22
-23     return dist[], prev[]
-
-
-input: 
-
-5
-2
-8
-1 2
-4 5 -5
-2 4 3 
-1 4 2
-3 4 -4
-1 5 -1
-2 3 5
-1 3 4
-2 5 -2
-
-  */
 
